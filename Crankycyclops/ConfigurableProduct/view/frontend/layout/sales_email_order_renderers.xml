@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+		<referenceBlock name="sales.email.order.renderers">
+			<block class="Crankycyclops\ConfigurableProduct\Block\Sales\Order\Email\Items\ConfigurableProduct" name="sales.email.order.renderers.default" as="default" template="Crankycyclops_ConfigurableProduct::email/mixed.phtml" />
+		</referenceBlock>
+    </body>
+</page>
+

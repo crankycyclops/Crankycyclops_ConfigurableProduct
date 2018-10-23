@@ -1,0 +1,14 @@
+<?php
+
+// Set the appropriate template depending on whether or not the simple
+// product is downloadable
+if ($block->isSimpleProductDownloadable()) {
+	$block->setTemplate('Magento_Downloadable::email/order/items/order/downloadable.phtml');
+} else {
+	$block->setTemplate('Magento_Sales::email/items/order/default.phtml');
+}
+
+echo $block->toHtml();
+
+?>
+

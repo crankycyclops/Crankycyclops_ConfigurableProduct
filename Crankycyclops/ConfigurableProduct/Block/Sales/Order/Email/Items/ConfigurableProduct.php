@@ -8,6 +8,11 @@
  * except that this will also include links to downloadable options from
  * configurable products.
  *
+ * TODO: I should be extending the Downloadable block from Magento_Downloadable
+ * and overriding the functions that are different instead of copying
+ * the class and modifying the copy. Forgive me. I was tired when I
+ * wrote this :) Will fix in an upcoming commit.
+ *
  * Modifications Copyright © James Colannino.
  */
 

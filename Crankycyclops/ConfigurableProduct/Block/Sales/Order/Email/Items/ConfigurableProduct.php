@@ -21,8 +21,16 @@
 namespace Crankycyclops\ConfigurableProduct\Block\Sales\Order\Email\Items;
 
 use Magento\Downloadable\Model\Link;
+use Magento\Downloadable\Model\Link\Purchased;
 use Magento\Downloadable\Model\Link\Purchased\Item;
+use Magento\Downloadable\Model\Link\PurchasedFactory;
+use Magento\Downloadable\Model\ResourceModel\Link\Purchased\Item\CollectionFactory;
 use Magento\Framework\App\ObjectManager;
+use Magento\Framework\Url;
+use Magento\Framework\UrlInterface;
+use Magento\Framework\View\Element\Template\Context;
+use Magento\Sales\Block\Order\Email\Items\Order\DefaultOrder;
+use Magento\Sales\Model\Order;
 use Magento\Store\Model\ScopeInterface;
 
 /**
@@ -31,127 +39,121 @@ use Magento\Store\Model\ScopeInterface;
  * @api
  * @since 100.0.2
  */
-class ConfigurableProduct extends \Magento\Sales\Block\Order\Email\Items\Order\DefaultOrder {
+class ConfigurableProduct extends DefaultOrder
+{
+    protected Purchased $_purchased;
 
-	/**
-	 * @var \Magento\Downloadable\Model\Link\Purchased
-	 */
-	protected $_purchased;
+    protected PurchasedFactory $_purchasedFactory;
 
-	/**
-	 * @var \Magento\Downloadable\Model\Link\PurchasedFactory
-	 */
-	protected $_purchasedFactory;
+    protected CollectionFactory $_itemsFactory;
 
-	/**
-	 * @var \Magento\Downloadable\Model\ResourceModel\Link\Purchased\Item\CollectionFactory
-	 */
-	protected $_itemsFactory;
+    private UrlInterface $frontendUrlBuilder;
 
-	/**
-	 * @var \Magento\Framework\UrlInterface
-	 */
-	private $frontendUrlBuilder;
+    /**
+     * @param Context           $context
+     * @param PurchasedFactory  $purchasedFactory
+     * @param CollectionFactory $itemsFactory
+     * @param array             $data
+     */
+    public function __construct(
+        Context $context,
+        PurchasedFactory $purchasedFactory,
+        CollectionFactory $itemsFactory,
+        array $data = []
+    ) {
+        $this->_purchasedFactory = $purchasedFactory;
+        $this->_itemsFactory     = $itemsFactory;
+        parent::__construct($context, $data);
+    }
 
-	/**
-	 * @param \Magento\Framework\View\Element\Template\Context $context
-	 * @param \Magento\Downloadable\Model\Link\PurchasedFactory $purchasedFactory
-	 * @param \Magento\Downloadable\Model\ResourceModel\Link\Purchased\Item\CollectionFactory $itemsFactory
-	 * @param array $data
-	 */
-	public function __construct(
-		\Magento\Framework\View\Element\Template\Context $context,
-		\Magento\Downloadable\Model\Link\PurchasedFactory $purchasedFactory,
-		\Magento\Downloadable\Model\ResourceModel\Link\Purchased\Item\CollectionFactory $itemsFactory,
-		array $data = []
-	) {
-		$this->_purchasedFactory = $purchasedFactory;
-		$this->_itemsFactory = $itemsFactory;
-		parent::__construct($context, $data);
-	}
+    /**
+     * Returns the item's child item, which represents the simple product that
+     * was actually ordered.
+     * Written by James Colannino.
+     *
+     * @return Order|bool
+     */
+    public function getChildItem()
+    {
+        $childrenItems = $this->getItem()->getChildrenItems();
 
-	/**
-	 * Returns the item's child item, which represents the simple product that
-	 * was actually ordered.
-	 * Written by James Colannino.
-	 *
-	 * @return \Magento\Sales\Model\Order
-	 */
-	public function getChildItem() {
+        return $childrenItems[0] ?? false;
+    }
 
-		$childrenItems = $this->getItem()->getChildrenItems();
-		return $childrenItems[0];
-	}
+    public function isSimpleProductDownloadable(): bool
+    {
+        if ($this->getChildItem() && $this->getChildItem()->getProduct() && $this->getChildItem()->getProduct()->getTypeId()) {
+            return 'downloadable' === $this->getChildItem()->getProduct()->getTypeId();
+        }
+        return false;
+    }
 
-	public function isSimpleProductDownloadable() {
+    /**
+     * Enter description here... (Magento's comment, not mine...)
+     * Modified by James Colannino so that this returns the links associated with
+     * the configurable option's corresponding simple product (should only be
+     * called if the simple product is downloadable.)
+     *
+     * @return Purchased
+     */
+    public function getLinks()
+    {
+        $this->_purchased = $this->_purchasedFactory->create()->load(
+            $this->getItem()->getId(),
+            'order_item_id'
+        );
 
-		return 'downloadable' == $this->getChildItem()->getProduct()->getTypeId() ? true : false;
-	}
+        $purchasedLinks = $this->_itemsFactory->create()->addFieldToFilter('order_item_id',
+            $this->getChildItem()->getId());
+        $this->_purchased->setPurchasedItems($purchasedLinks);
 
-	/**
-	 * Enter description here... (Magento's comment, not mine...)
-	 * Modified by James Colannino so that this returns the links associated with
-	 * the configurable option's corresponding simple product (should only be
-	 * called if the simple product is downloadable.)
-	 *
-	 * @return \Magento\Downloadable\Model\Link\Purchased
-	 */
-	public function getLinks() {
+        return $this->_purchased;
+    }
 
-		$this->_purchased = $this->_purchasedFactory->create()->load(
-			$this->getItem()->getId(),
-			'order_item_id'
-		);
+    /**
+     * @return null|string
+     */
+    public function getLinksTitle()
+    {
+        return $this->getLinks()->getLinkSectionTitle() ?: $this->_scopeConfig->getValue(
+            Link::XML_PATH_LINKS_TITLE,
+            ScopeInterface::SCOPE_STORE
+        );
+    }
 
-		$purchasedLinks = $this->_itemsFactory->create()->addFieldToFilter('order_item_id', $this->getChildItem()->getId());
-		$this->_purchased->setPurchasedItems($purchasedLinks);
+    /**
+     * @param Item $item
+     *
+     * @return string
+     */
+    public function getPurchasedLinkUrl($item): string
+    {
+        $url = $this->getFrontendUrlBuilder()->getUrl(
+            'downloadable/download/link',
+            [
+                'id' => $item->getLinkHash(),
+                '_scope' => $this->getOrder()->getStore(),
+                '_secure' => true,
+                '_nosid' => true
+            ]
+        );
 
-		return $this->_purchased;
-	}
+        return $url;
+    }
 
-	/**
-	 * @return null|string
-	 */
-	public function getLinksTitle() {
+    /**
+     * Get frontend URL builder
+     *
+     * @return UrlInterface
+     * @deprecated 100.1.0
+     */
+    private function getFrontendUrlBuilder(): UrlInterface
+    {
+        if (!$this->frontendUrlBuilder) {
+            $this->frontendUrlBuilder = ObjectManager::getInstance()->get(Url::class);
+        }
 
-		return $this->getLinks()->getLinkSectionTitle() ?: $this->_scopeConfig->getValue(
-			Link::XML_PATH_LINKS_TITLE,
-			ScopeInterface::SCOPE_STORE
-		);
-	}
-
-	/**
-	 * @param Item $item
-	 * @return string
-	 */
-	public function getPurchasedLinkUrl($item) {
-
-		$url = $this->getFrontendUrlBuilder()->getUrl(
-			'downloadable/download/link',
-			[
-				'id' => $item->getLinkHash(),
-				'_scope' => $this->getOrder()->getStore(),
-				'_secure' => true,
-				'_nosid' => true
-			]
-		);
-
-		return $url;
-	}
-
-	/**
-	 * Get frontend URL builder
-	 *
-	 * @return \Magento\Framework\UrlInterface
-	 * @deprecated 100.1.0
-	 */
-	private function getFrontendUrlBuilder() {
-
-		if (!$this->frontendUrlBuilder) {
-			$this->frontendUrlBuilder = ObjectManager::getInstance()->get(\Magento\Framework\Url::class);
-		}
-
-		return $this->frontendUrlBuilder;
-	}
+        return $this->frontendUrlBuilder;
+    }
 }
 

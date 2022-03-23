@@ -1,5 +1,5 @@
 {
-    "name": "crankycyclops/configurable-product",
+    "name": "crankycyclops/magento2-configurable-downloadable-product",
     "description": "Add download links to order confirmation mail when the downloadable product is part of a configurable",
     "type": "magento2-module",
     "license": "OSL-3.0",

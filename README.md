@@ -6,3 +6,4 @@ To install, cd to the directory of your magento installation and run the followi
 ```
 composer require crankycyclops/magento2-configurable-downloadable-product
 ```
+Special thanks to Peter Jaap Blaakmeer for whipping this module into shape and preparing it for release.

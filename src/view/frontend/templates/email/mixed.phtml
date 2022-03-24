@@ -1,7 +1,13 @@
 <?php
 
-// Set the appropriate template depending on whether or not the simple
-// product is downloadable
+use Crankycyclops\ConfigurableProduct\Block\Sales\Order\Email\Items\ConfigurableProduct;
+
+/**
+ * Set the appropriate template depending on whether the simple product is downloadable
+ *
+ * @var ConfigurableProduct $block
+ */
+
 if ($block->isSimpleProductDownloadable()) {
 	$block->setTemplate('Magento_Downloadable::email/order/items/order/downloadable.phtml');
 } else {
@@ -9,6 +15,3 @@ if ($block->isSimpleProductDownloadable()) {
 }
 
 echo $block->toHtml();
-
-?>
-
